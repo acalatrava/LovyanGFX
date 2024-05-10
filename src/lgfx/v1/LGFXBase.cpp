@@ -920,6 +920,49 @@ namespace lgfx
     endWrite();
   }
 
+  void LGFXBase::fillOutsideCorners(int32_t x, int32_t y, int32_t w, int32_t h, int32_t r) {
+      startWrite();
+      uint32_t rgb888 = _write_conv.revert_rgb888(_color.raw);
+      uint8_t red = (rgb888 >> 16) & 0xFF;
+      uint8_t green = (rgb888 >> 8) & 0xFF;
+      uint8_t blue = rgb888 & 0xFF;
+
+      if (r > w / 2) r = w / 2;
+      if (r > h / 2) r = h / 2;
+
+      // Define the areas for each corner to be filled
+      for (int cy = 0; cy <= r; cy++) {
+          for (int cx = 0; cx <= r; cx++) {
+            float distance = sqrtf(cx * cx + cy * cy);
+            if (distance > r) {
+                // Adjust alpha only for pixels near the edge
+                float alpha = 1.0f;
+                if (distance < r + 1) { // Smooth only the outermost layer of pixels
+                    alpha = 1.0f - (distance - r);
+                }
+
+                uint32_t color = (uint32_t((red * alpha) + 0.5f) << 16) |
+                                 (uint32_t((green * alpha) + 0.5f) << 8) |
+                                 (uint32_t((blue * alpha) + 0.5f));
+                // Top-left corner
+                writePixel(x + r - cx, y + r - cy, color);
+
+                // Top-right corner
+                writePixel(x + w - r + cx - 1, y + r - cy, color);
+
+                // Bottom-left corner
+                writePixel(x + r - cx, y + h - r + cy - 1, color);
+
+                // Bottom-right corner
+                writePixel(x + w - r + cx - 1, y + h - r + cy - 1, color);
+              }
+          }
+      }
+      endWrite();
+  }
+
+
+
   void LGFXBase::drawEllipseArc(int32_t x, int32_t y, int32_t r0x, int32_t r1x, int32_t r0y, int32_t r1y, float start, float end)
   {
     if (r0x < r1x) std::swap(r0x, r1x);
